@@ -33,8 +33,8 @@ app.post('/enviar-boleto', async (req, res) => {
   }
 
   const chatId = `${numero}@c.us`;
-  const mensagemPadrao = `Olá! Aqui é ${empresa}, seu boleto está pronto para pagamento, utilize o código de barras: ${digitable}`;
-
+  
+  const mensagemPadrao = `Olá! Aqui é *${empresa}*, seu boleto está pronto para pagamento.\nUtilize o *código de barras:* ${digitable}`;
   try {
     // Baixa o PDF como buffer
     const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
