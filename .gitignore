@@ -1,5 +1,46 @@
+# Logs gerais
+*.log
+*.log.*
+logs/
+log/
+*.out
+*.err
+*.pid
+
+# Sessões e caches do WhatsApp Web
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Ambientes Node.js
 node_modules/
 .env
-.DS_Store
+.env.*.local
+.nyc_output/
+coverage/
+dist/
+build/
+.tmp/
+.pnp/
+.pnpm-debug.log
 .vscode/
-.wwebjs_auth/
+
+# Ambientes n8n (caso use)
+.n8n/
+
+# IDEs e sistema operacional
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+*.bak
+*.tmp
+
+# Arquivos compactados ou gerados
+*.zip
+*.tar
+*.gz
+*.7z
+
+# Ignorar tudo que contenha “log” em qualquer lugar do nome
+*log*
