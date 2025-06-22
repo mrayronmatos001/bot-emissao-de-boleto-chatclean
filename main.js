@@ -26,15 +26,15 @@ client.initialize();
 
 // 🌐 Endpoint para número + PDF via URL
 app.post('/enviar-boleto', async (req, res) => {
-  const { numero, empresa, pdfUrl, digitable } = req.body;
+  const { numero, artigo, empresa, pdfUrl, digitable } = req.body;
 
-  if (!numero || !empresa || !pdfUrl || !digitable) {
+  if (!numero || !artigo || !empresa || !pdfUrl || !digitable) {
     return res.status(400).send('Campos obrigatórios: numero, nome da empresa e pdfUrl');
   }
 
   const chatId = `${numero}@c.us`;
   
-  const mensagemPadrao = `Olá! Aqui é *${empresa}*, seu boleto está pronto para pagamento.\nUtilize o *código de barras:* ${digitable}`;
+  const mensagemPadrao = `Olá! Aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto já está pronto para pagamento.\nUtilize o código de barras: *${digitable}*`;
   try {
     // Baixa o PDF como buffer
     const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
