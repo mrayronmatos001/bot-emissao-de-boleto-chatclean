@@ -1,0 +1,25 @@
+{
+  "name": "bot-emissao-de-boleto-chatclean",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mrayronmatos001/bot-emissao-de-boleto-chatclean.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mrayronmatos001/bot-emissao-de-boleto-chatclean/issues"
+  },
+  "homepage": "https://github.com/mrayronmatos001/bot-emissao-de-boleto-chatclean#readme",
+  "dependencies": {
+    "express": "^5.1.0",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.30.0"
+  }
+}
