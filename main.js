@@ -34,7 +34,7 @@ app.post('/enviar-boleto', async (req, res) => {
 
   const chatId = `${numero}@c.us`;
   
-  const mensagemPadrao = `Olá! Aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto já está prontinho.\nUtilize o código de barras abaixo para pagamento.`;
+  const mensagemPadrao = `Olá! Aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto já está prontinho. Utilize o código de barras abaixo para pagamento.`;
   const codebar = `*${digitable}*`;
   try {
     // Baixa o PDF como buffer
