@@ -26,14 +26,14 @@ client.initialize();
 
 // 🌐 Endpoint para número + PDF via URL
 app.post('/enviar-boleto', async (req, res) => {
-  const { numero, pdfUrl } = req.body;
+  const { numero, empresa, pdfUrl, digitable } = req.body;
 
-  if (!numero || !pdfUrl) {
-    return res.status(400).send('Campos obrigatórios: numero e pdfUrl');
+  if (!numero || !empresa || !pdfUrl || !digitable) {
+    return res.status(400).send('Campos obrigatórios: numero, nome da empresa e pdfUrl');
   }
 
   const chatId = `${numero}@c.us`;
-  const mensagemPadrao = 'Olá! Segue seu boleto em anexo.';
+  const mensagemPadrao = `Olá! Aqui é ${empresa}, seu boleto está pronto para pagamento, utilize o código de barras: ${digitable}`;
 
   try {
     // Baixa o PDF como buffer
