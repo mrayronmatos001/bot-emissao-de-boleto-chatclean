@@ -1,13 +1,12 @@
-// 📦 Dependências necessárias:
-// npm install whatsapp-web.js qrcode-terminal express
-
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const express = require('express');
+const axios = require('axios');
+const mime = require('mime-types');
+
 const app = express();
 app.use(express.json());
 
-// 🔐 Autenticação local (evita escanear QR toda vez)
 const client = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: {
@@ -15,40 +14,47 @@ const client = new Client({
   }
 });
 
-// 📸 Exibe o QR code no terminal quando necessário
 client.on('qr', qr => {
   qrcode.generate(qr, { small: true });
 });
 
-// ✅ Confirmação quando o cliente estiver pronto
 client.once('ready', () => {
   console.log('✅ Bot WhatsApp conectado e pronto!');
 });
 
-// 🚀 Inicializa o cliente
 client.initialize();
 
-// 🌐 Endpoint HTTP para receber requisições do n8n ou Apps Script
+// 🌐 Endpoint para número + PDF via URL
 app.post('/enviar-boleto', async (req, res) => {
-  const { numero, mensagem } = req.body;
+  const { numero, pdfUrl } = req.body;
 
-  if (!numero || !mensagem) {
-    return res.status(400).send('Faltam campos obrigatórios: numero ou mensagem');
+  if (!numero || !pdfUrl) {
+    return res.status(400).send('Campos obrigatórios: numero e pdfUrl');
   }
 
   const chatId = `${numero}@c.us`;
+  const mensagemPadrao = 'Olá! Segue seu boleto em anexo.';
 
   try {
-    await client.sendMessage(chatId, mensagem);
-    console.log(`📨 Mensagem enviada para ${numero}`);
-    res.send('✅ Mensagem enviada com sucesso!');
+    // Baixa o PDF como buffer
+    const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
+    const base64 = Buffer.from(response.data, 'binary').toString('base64');
+    const mimeType = mime.lookup(pdfUrl) || 'application/pdf';
+
+    const media = new MessageMedia(mimeType, base64, 'boleto.pdf');
+
+    // Envia a mensagem padrão + PDF
+    await client.sendMessage(chatId, mensagemPadrao);
+    await client.sendMessage(chatId, media);
+
+    console.log(`📨 Boleto enviado para ${numero}`);
+    res.send('✅ Mensagem e PDF enviados com sucesso!');
   } catch (error) {
-    console.error('❌ Erro ao enviar mensagem:', error);
-    res.status(500).send('Erro ao enviar mensagem.');
+    console.error('❌ Erro ao enviar boleto:', error.message);
+    res.status(500).send('Erro ao enviar boleto.');
   }
 });
 
-// 🚪 Inicia o servidor Express na porta 3000
 app.listen(3000, '0.0.0.0', () => {
   console.log('🌐 API do bot rodando em http://localhost:3000');
 });
