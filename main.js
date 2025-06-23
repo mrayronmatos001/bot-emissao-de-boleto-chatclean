@@ -34,9 +34,9 @@ app.post('/enviar-boleto', async (req, res) => {
 
   const chatId = `${numero}@c.us`;
   
-  const mensagemPadrao = `Olá! Aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto no valor de ${amount},00 já está prontinho. Utilize o código pix (copia e cola) para pagamento ou, se preferir, o código de barras do boleto.`;
-  const pix = `*${pixKey}*`
-  const codebar = `*${digitable}*`;
+  const mensagemPadrao = `Prezado cliente, aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto no valor de ${amount},00 já está pronto. Utilize o código de barras para efetuar o pagamento.`;
+  const pix = `${pixKey}`
+  const codebar = `${digitable}`;
   try {
     // Baixa o PDF como buffer
     const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
@@ -47,11 +47,9 @@ app.post('/enviar-boleto', async (req, res) => {
 
     // Envia a mensagem padrão + PDF
     await client.sendMessage(chatId, mensagemPadrao);
-    await client.sendMessage(chatId, `*⚡ Chave Pix (copia e cola):*`);
-    await client.sendMessage(chatId, pix);
-    await client.sendMessage(chatId, `*💳 Linha digitável do boleto:*`);
     await client.sendMessage(chatId, codebar);
-    await client.sendMessage(chatId, `📎 Em anexo está o PDF do seu boleto.`);
+    await client.sendMessage(chatId, `Se preferir, segue o código de chave pix como alternativa`);
+    await client.sendMessage(chatId, pix);
     await client.sendMessage(chatId, media);
     await client.sendMessage(chatId, `Qualquer dúvida, estamos por aqui. 😊`);
 
@@ -62,6 +60,10 @@ app.post('/enviar-boleto', async (req, res) => {
     res.status(500).send('Erro ao enviar boleto.');
   }
 });
+
+app.post('/enviar-cobranca', async (req, res) => {
+
+})
 
 app.listen(3000, '0.0.0.0', () => {
   console.log('🌐 API do bot rodando em http://localhost:3000');
