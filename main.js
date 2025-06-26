@@ -59,10 +59,10 @@ app.post('/enviar-boleto', async (req, res) => {
 });
 
 app.post('/enviar-cobranca', async (req, res) => {
-  const { numero, artigo, empresa, diasParaVencimento, valor, digitable, pixKey, nomeCliente, numeroContrato, pdfUrl } = req.body;
+  const { numero, artigo, empresa, diasParaVencimento, valor, digitable, pixKey, pdfUrl, dataVencimento } = req.body;
 
-  if (!numero || !artigo || !empresa || !diasParaVencimento || !valor || !digitable || !pixKey) {
-    return res.status(400).send('Campos obrigatórios: numero, artigo, empresa, dataVencimento, valor, digitable, pixKey');
+  if (!numero || !artigo || !empresa || !diasParaVencimento || !valor || !digitable || !pixKey || !pdfUrl) {
+    return res.status(400).send('Campos obrigatórios: numero, artigo, empresa, valor, digitable, pixKey');
   }
 
   const chatId = `${numero}@c.us`;
@@ -76,7 +76,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         ``,
         `Olá ${nomeCliente ? ` ${nomeCliente}` : ''}! Aqui é ${artigo} *${empresa}*.`,
         ``,
-        `Estamos passando para lembrar que seu boleto${numeroContrato ? ` (contrato ${numeroContrato})` : ''} no valor de *R$ ${valor}* vence em *3 dias*, no dia *${dataFormatada}*.`,
+        `Estamos passando para lembrar que seu boleto${numeroContrato ? ` (contrato ${numeroContrato})` : ''} no valor de *R$ ${valor}* vence em *3 dias*, no dia *${dataVencimento}*.`,
         ``,
         `Para evitar juros e multas, efetue o pagamento até a data de vencimento.`,
         ``,
@@ -94,7 +94,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         ``,
         `Olá${nomeCliente ? ` ${nomeCliente}` : ''}! Aqui é ${artigo} *${empresa}*.`,
         ``,
-        `Seu boleto${numeroContrato ? ` (contrato ${numeroContrato})` : ''} no valor de *R$ ${valor}* vence *HOJE* (${dataFormatada}).`,
+        `Seu boleto${numeroContrato ? ` (contrato ${numeroContrato})` : ''} no valor de *R$ ${valor}* vence *HOJE* (${dataVencimento}).`,
         ``,
         `⏰ Para evitar juros e multas, efetue o pagamento ainda hoje!`,
         ``,
@@ -113,7 +113,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         ``,
         `Olá${nomeCliente ? ` ${nomeCliente}` : ''}! Aqui é ${artigo} *${empresa}*.`,
         ``,
-        `Identificamos que seu boleto${numeroContrato ? ` (contrato ${numeroContrato})` : ''} no valor de *R$ ${valor}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}* (vencimento: ${dataFormatada}).`,
+        `Identificamos que seu boleto${numeroContrato ? ` (contrato ${numeroContrato})` : ''} no valor de *R$ ${valor}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}* (vencimento: ${dataVencimento}).`,
         ``,
         `⚠️ *IMPORTANTE:* Boletos vencidos podem ter juros e multas aplicados.`,
         ``,
