@@ -65,6 +65,8 @@ app.post('/enviar-cobranca', async (req, res) => {
     return res.status(400).send('Campos obrigatórios: numero, artigo, empresa, valor, digitable, pixKey');
   }
 
+  diasParaVencimento = parseInt(diasParaVencimento, 10);
+
   const chatId = `${numero}@c.us`;
   
   try {
@@ -106,14 +108,12 @@ app.post('/enviar-cobranca', async (req, res) => {
         ``,
         `Em caso de dúvidas ou dificuldades, entre em contato conosco. Estamos aqui para ajudar! 📞`
       ];
-    } else if (diasParaVencimento == -1) {
+    } else if (diasParaVencimento === -1) {
       const diasVencido = Math.abs(diasParaVencimento);
       mensagens = [
         `🚨 *BOLETO VENCIDO*`,
         ``,
-        `Olá! Aqui é ${artigo} *${empresa}*.`,
-        ``,
-        `Identificamos que seu boleto no valor de *R$ ${valor}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}* (vencimento: ${dataVencimento}).`,
+        `Olá! Aqui é ${artigo} *${empresa}*. Identificamos que seu boleto no valor de *R$ ${valor}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}* (vencimento: ${dataVencimento}).`,
         ``,
         `⚠️ *IMPORTANTE:* Boletos vencidos podem ter juros e multas aplicados.`,
         ``,
