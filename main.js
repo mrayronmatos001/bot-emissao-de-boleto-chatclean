@@ -65,14 +65,12 @@ app.post('/enviar-cobranca', async (req, res) => {
     return res.status(400).send('Campos obrigatórios: numero, artigo, empresa, valor, digitable, pixKey');
   }
 
-  diasParaVencimento = parseInt(diasParaVencimento, 10);
-
   const chatId = `${numero}@c.us`;
   
   try {
     let mensagens = [];
     
-    if (diasParaVencimento === 3) {
+    if (diasParaVencimento == 3) {
       mensagens = [
         `🔔 *LEMBRETE DE VENCIMENTO*`,
         ``,
@@ -90,7 +88,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         ``,
         `Qualquer dúvida, estamos à disposição! 😊`
       ];
-    } else if (diasParaVencimento === 0) {
+    } else if (diasParaVencimento == 0) {
       mensagens = [
         `⚠️ *VENCIMENTO HOJE*`,
         ``,
@@ -108,7 +106,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         ``,
         `Em caso de dúvidas ou dificuldades, entre em contato conosco. Estamos aqui para ajudar! 📞`
       ];
-    } else if (diasParaVencimento === -1) {
+    } else if (diasParaVencimento == -1) {
       const diasVencido = Math.abs(diasParaVencimento);
       mensagens = [
         `🚨 *BOLETO VENCIDO*`,
