@@ -34,7 +34,8 @@ app.post('/enviar-boleto', async (req, res) => {
   const chatId = `${numero}@c.us`;
   
   const mensagemPadrao = `Prezado cliente, aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto no valor de ${amount},00 já está pronto. Utilize o código de barras para efetuar o pagamento.`;
-  const pix = `${pixKey}`;
+  const pix = pixKey.slice(0, 10) + '\u200B' + pixKey.slice(10);
+;
   const codebar = `${digitable}`;
   try {
     const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
@@ -65,6 +66,9 @@ app.post('/enviar-cobranca', async (req, res) => {
     return res.status(400).send('Campos obrigatórios: numero, artigo, empresa, valor, digitable, pixKey');
   }
 
+  const pix = pixKey.slice(0, 10) + '\u200B' + pixKey.slice(10);
+
+
   const chatId = `${numero}@c.us`;
   
   try {
@@ -84,7 +88,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         `${digitable}`,
         ``,
         `🔑 *Chave PIX (alternativa):*`,
-        `${pixKey}`,
+        `${pix}`,
         ``,
         `Qualquer dúvida, estamos à disposição! 😊`
       ];
@@ -102,7 +106,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         `${digitable}`,
         ``,
         `🔑 *Chave PIX (pagamento instantâneo):*`,
-        `${pixKey}`,
+        `${pix}`,
         ``,
         `Em caso de dúvidas ou dificuldades, entre em contato conosco. Estamos aqui para ajudar! 📞`
       ];
@@ -119,7 +123,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         `${digitable}`,
         ``,
         `🔑 *Chave PIX:*`,
-        `${pixKey}`,
+        `${pix}`,
         ``,
         `📞 Para negociar condições de pagamento ou esclarecer dúvidas, entre em contato conosco o quanto antes.`
       ];
