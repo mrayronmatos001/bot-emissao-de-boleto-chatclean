@@ -34,7 +34,7 @@ app.post('/enviar-boleto', async (req, res) => {
   const chatId = `${numero}@c.us`;
   
   const mensagemPadrao = `Prezado cliente, aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto no valor de ${amount},00 já está pronto. Utilize o código de barras para efetuar o pagamento.`;
-  const pix = pixKey.slice(0, 10) + '\u200B' + pixKey.slice(10);
+  const pix = pixKey;
 ;
   const codebar = `${digitable}`;
   try {
@@ -66,7 +66,7 @@ app.post('/enviar-cobranca', async (req, res) => {
     return res.status(400).send('Campos obrigatórios: numero, artigo, empresa, valor, digitable, pixKey');
   }
 
-  const pix = pixKey.slice(0, 10) + '\u200B' + pixKey.slice(10);
+  const pix = pixKey;
 
 
   const chatId = `${numero}@c.us`;
