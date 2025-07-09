@@ -67,6 +67,10 @@ app.post('/enviar-cobranca', async (req, res) => {
   }
 
   const pix = pixKey;
+  const valorFormatado = (valor / 100).toLocaleString('pt-BR', {
+  style: 'currency',
+  currency: 'BRL'
+});
 
 
   const chatId = `${numero}@c.us`;
@@ -80,7 +84,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         ``,
         `Olá ! Aqui é ${artigo} *${empresa}*.`,
         ``,
-        `Estamos passando para lembrar que seu boleto no valor de *R$ ${valor}* vence em *3 dias*, no dia *${dataVencimento}*.`,
+        `Estamos passando para lembrar que seu boleto no valor de *${valor}* vence em *3 dias*, no dia *${dataVencimento}*.`,
         ``,
         `Para evitar juros e multas, efetue o pagamento até a data de vencimento.`,
         ``,
@@ -98,7 +102,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         ``,
         `Olá! Aqui é ${artigo} *${empresa}*.`,
         ``,
-        `Seu boleto no valor de *R$ ${valor}* vence *HOJE* (${dataVencimento}).`,
+        `Seu boleto no valor de *${valor}* vence *HOJE* (${dataVencimento}).`,
         ``,
         `⏰ Para evitar juros e multas, efetue o pagamento ainda hoje!`,
         ``,
@@ -113,9 +117,9 @@ app.post('/enviar-cobranca', async (req, res) => {
     } else if (diasParaVencimento == -1) {
       const diasVencido = Math.abs(diasParaVencimento);
       mensagens = [
-        `🚨 *BOLETO VENCIDO*`,
+        `🚨 * *`,
         ``,
-        `Olá! Aqui é ${artigo} *${empresa}*. Identificamos que seu boleto no valor de *R$ ${valor}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}* (vencimento: ${dataVencimento}).`,
+        `Olá! Aqui é ${artigo} *${empresa}*. Identificamos que seu boleto no valor de *${valor}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}* (vencimento: ${dataVencimento}).`,
         ``,
         `⚠️ *IMPORTANTE:* Boletos vencidos podem ter juros e multas aplicados.`,
         ``,
