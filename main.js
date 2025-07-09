@@ -32,8 +32,12 @@ app.post('/enviar-boleto', async (req, res) => {
   }
 
   const chatId = `${numero}@c.us`;
+  const valorFormatado = (amount / 100).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  });
   
-  const mensagemPadrao = `Prezado cliente, aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto no valor de ${amount} já está pronto. Utilize o código de barras para efetuar o pagamento.`;
+  const mensagemPadrao = `Prezado cliente, aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto no valor de ${valorFormatado} já está pronto. Utilize o código de barras para efetuar o pagamento.`;
   const pix = pixKey;
 ;
   const codebar = `${digitable}`;
@@ -68,9 +72,9 @@ app.post('/enviar-cobranca', async (req, res) => {
 
   const pix = pixKey;
   const valorFormatado = (valor / 100).toLocaleString('pt-BR', {
-  style: 'currency',
-  currency: 'BRL'
-});
+    style: 'currency',
+    currency: 'BRL'
+  });
 
 
   const chatId = `${numero}@c.us`;
@@ -84,7 +88,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         ``,
         `Olá ! Aqui é ${artigo} *${empresa}*.`,
         ``,
-        `Estamos passando para lembrar que seu boleto no valor de *${valor}* vence em *3 dias*, no dia *${dataVencimento}*.`,
+        `Estamos passando para lembrar que seu boleto no valor de *${valorFormatado}* vence em *3 dias*, no dia *${dataVencimento}*.`,
         ``,
         `Para evitar juros e multas, efetue o pagamento até a data de vencimento.`,
         ``,
@@ -102,7 +106,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         ``,
         `Olá! Aqui é ${artigo} *${empresa}*.`,
         ``,
-        `Seu boleto no valor de *${valor}* vence *HOJE* (${dataVencimento}).`,
+        `Seu boleto no valor de *${valorFormatado}* vence *HOJE* (${dataVencimento}).`,
         ``,
         `⏰ Para evitar juros e multas, efetue o pagamento ainda hoje!`,
         ``,
@@ -119,7 +123,7 @@ app.post('/enviar-cobranca', async (req, res) => {
       mensagens = [
         `🚨 * *`,
         ``,
-        `Olá! Aqui é ${artigo} *${empresa}*. Identificamos que seu boleto no valor de *${valor}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}* (vencimento: ${dataVencimento}).`,
+        `Olá! Aqui é ${artigo} *${empresa}*. Identificamos que seu boleto no valor de *${valorFormatado}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}* (vencimento: ${dataVencimento}).`,
         ``,
         `⚠️ *IMPORTANTE:* Boletos vencidos podem ter juros e multas aplicados.`,
         ``,
