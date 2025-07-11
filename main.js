@@ -49,6 +49,10 @@ app.post('/enviar-boleto', async (req, res) => {
   }
 
   const chatId = `${numero}@c.us`;
+  if (isNaN(valorEmCentavos)) {
+    console.error('❌ O valor de "amount" é inválido:', amount);
+    return res.status(400).send('❌ O campo "amount" precisa ser um número em centavos, ex: 1599 para R$ 15,99.');
+  }
   const valorFormatado = (amount / 100).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL'
