@@ -91,6 +91,7 @@ app.post('/enviar-cobranca', async (req, res) => {
 
   const chatId = `${numero}@c.us`;
   const pix = pixKey;
+  const valorEmCentavos = Number(amount);
   const valorFormatado = (valor / 100).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL'
