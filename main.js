@@ -59,7 +59,7 @@ app.post('/enviar-boleto', async (req, res) => {
     currency: 'BRL'
   });
 
-  const mensagemPadrao = `Prezado cliente, aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto no valor de ${valorFormatado} já está pronto. Utilize o código de barras para efetuar o pagamento.`;
+  const mensagemPadrao = `Prezado cliente, aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto no valor de *${amount}* já está pronto. Utilize o código de barras para efetuar o pagamento.`;
 
   try {
     const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
