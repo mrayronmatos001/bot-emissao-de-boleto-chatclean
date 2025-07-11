@@ -21,7 +21,7 @@ client.on('qr', qr => {
   console.log('📲 Escaneie o QR Code acima com seu WhatsApp.');
 });
 
-client.once('ready', () => {
+client.on('ready', () => {
   whatsappPronto = true;
   console.log('✅ Bot WhatsApp conectado e pronto!');
 });
