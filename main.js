@@ -91,7 +91,10 @@ app.post('/enviar-cobranca', async (req, res) => {
 
   const chatId = `${numero}@c.us`;
   const pix = pixKey;
-  const valorEmCentavos = Number(amount);
+  if (isNaN(valorEmCentavos)) {
+    console.error('❌ O valor de "amount" é inválido:', amount);
+    return res.status(400).send('❌ O campo "amount" precisa ser um número em centavos, ex: 1599 para R$ 15,99.');
+  }
   const valorFormatado = (valor / 100).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL'
