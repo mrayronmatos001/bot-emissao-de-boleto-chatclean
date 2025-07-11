@@ -49,6 +49,7 @@ app.post('/enviar-boleto', async (req, res) => {
   }
 
   const chatId = `${numero}@c.us`;
+  let valorEmCentavos = Number(amount);
   if (isNaN(valorEmCentavos)) {
     console.error('❌ O valor de "amount" é inválido:', amount);
     return res.status(400).send('❌ O campo "amount" precisa ser um número em centavos, ex: 1599 para R$ 15,99.');
@@ -95,8 +96,9 @@ app.post('/enviar-cobranca', async (req, res) => {
 
   const chatId = `${numero}@c.us`;
   const pix = pixKey;
+  valorEmCentavos = Number(valor);
   if (isNaN(valorEmCentavos)) {
-    console.error('❌ O valor de "amount" é inválido:', amount);
+    console.error('❌ O valor de "amount" é inválido:', valor);
     return res.status(400).send('❌ O campo "amount" precisa ser um número em centavos, ex: 1599 para R$ 15,99.');
   }
   const valorFormatado = (valor / 100).toLocaleString('pt-BR', {
