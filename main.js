@@ -7,24 +7,41 @@ const mime = require('mime-types');
 const app = express();
 app.use(express.json());
 
+let whatsappPronto = false;
+
 const client = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: {
-    args: ['--no-sandbox']
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
   }
 });
 
 client.on('qr', qr => {
   qrcode.generate(qr, { small: true });
+  console.log('📲 Escaneie o QR Code acima com seu WhatsApp.');
 });
 
 client.once('ready', () => {
+  whatsappPronto = true;
   console.log('✅ Bot WhatsApp conectado e pronto!');
+});
+
+client.on('auth_failure', msg => {
+  console.error('❌ Falha na autenticação:', msg);
+});
+
+client.on('disconnected', reason => {
+  whatsappPronto = false;
+  console.warn('⚠️ Cliente desconectado:', reason);
 });
 
 client.initialize();
 
 app.post('/enviar-boleto', async (req, res) => {
+  if (!whatsappPronto) {
+    return res.status(503).send('❌ WhatsApp ainda está conectando. Tente novamente em alguns segundos.');
+  }
+
   const { numero, artigo, empresa, pdfUrl, digitable, pixKey, amount } = req.body;
 
   if (!numero || !artigo || !empresa || !pdfUrl || !digitable || !pixKey || !amount) {
@@ -36,11 +53,9 @@ app.post('/enviar-boleto', async (req, res) => {
     style: 'currency',
     currency: 'BRL'
   });
-  
+
   const mensagemPadrao = `Prezado cliente, aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto no valor de ${valorFormatado} já está pronto. Utilize o código de barras para efetuar o pagamento.`;
-  const pix = pixKey;
-;
-  const codebar = `${digitable}`;
+
   try {
     const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
     const base64 = Buffer.from(response.data, 'binary').toString('base64');
@@ -49,39 +64,41 @@ app.post('/enviar-boleto', async (req, res) => {
     const media = new MessageMedia(mimeType, base64, 'boleto.pdf');
 
     await client.sendMessage(chatId, mensagemPadrao);
-    await client.sendMessage(chatId, codebar);
-    await client.sendMessage(chatId, `Se preferir, segue o código de chave pix como alternativa`);
-    await client.sendMessage(chatId, pix);
+    await client.sendMessage(chatId, digitable);
+    await client.sendMessage(chatId, `Se preferir, segue a chave pix como alternativa:`);
+    await client.sendMessage(chatId, pixKey);
     await client.sendMessage(chatId, media);
     await client.sendMessage(chatId, `Qualquer dúvida, estamos por aqui. 😊`);
 
     console.log(`📨 Boleto enviado para ${numero}`);
     res.send('✅ Mensagem e PDF enviados com sucesso!');
   } catch (error) {
-    console.error('❌ Erro ao enviar boleto:', error.message);
+    console.error('❌ Erro ao enviar boleto:', error);
     res.status(500).send('Erro ao enviar boleto.');
   }
 });
 
 app.post('/enviar-cobranca', async (req, res) => {
+  if (!whatsappPronto) {
+    return res.status(503).send('❌ WhatsApp ainda está conectando. Tente novamente em alguns segundos.');
+  }
+
   const { numero, artigo, empresa, diasParaVencimento, valor, digitable, pixKey, pdfUrl, dataVencimento } = req.body;
 
   if (!numero || !artigo || !empresa || !diasParaVencimento || !valor || !digitable || !pixKey || !pdfUrl) {
     return res.status(400).send('Campos obrigatórios: numero, artigo, empresa, valor, digitable, pixKey');
   }
 
+  const chatId = `${numero}@c.us`;
   const pix = pixKey;
   const valorFormatado = (valor / 100).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   });
 
-
-  const chatId = `${numero}@c.us`;
-  
   try {
     let mensagens = [];
-    
+
     if (diasParaVencimento == 3) {
       mensagens = [
         `🔔 *LEMBRETE DE VENCIMENTO*`,
@@ -121,7 +138,7 @@ app.post('/enviar-cobranca', async (req, res) => {
     } else if (diasParaVencimento == -1) {
       const diasVencido = Math.abs(diasParaVencimento);
       mensagens = [
-        `🚨 * *`,
+        `🚨 *BOLETO VENCIDO*`,
         ``,
         `Olá! Aqui é ${artigo} *${empresa}*. Identificamos que seu boleto no valor de *${valorFormatado}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}* (vencimento: ${dataVencimento}).`,
         ``,
@@ -150,7 +167,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         const base64 = Buffer.from(response.data, 'binary').toString('base64');
         const mimeType = mime.lookup(pdfUrl) || 'application/pdf';
         const media = new MessageMedia(mimeType, base64, 'boleto.pdf');
-        
+
         await client.sendMessage(chatId, media);
       } catch (pdfError) {
         console.error('❌ Erro ao enviar PDF:', pdfError.message);
@@ -162,9 +179,10 @@ app.post('/enviar-cobranca', async (req, res) => {
       success: true,
       message: 'Cobrança enviada com sucesso!',
       diasParaVencimento: diasParaVencimento,
-      tipoCobranca: diasParaVencimento === 3 ? 'lembrete_3_dias' : 
-                   diasParaVencimento === 0 ? 'vencimento_hoje' : 
-                   diasParaVencimento === -1 ? 'vencido_faz_um_dia' : 'vencido_faz_um_dia'
+      tipoCobranca:
+        diasParaVencimento === 3 ? 'lembrete_3_dias' :
+        diasParaVencimento === 0 ? 'vencimento_hoje' :
+        diasParaVencimento === -1 ? 'vencido_faz_um_dia' : 'vencido'
     });
 
   } catch (error) {
