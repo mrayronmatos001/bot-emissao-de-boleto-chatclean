@@ -91,15 +91,10 @@ app.post('/enviar-cobranca', async (req, res) => {
 
   const chatId = `${numero}@c.us`;
   const pix = pixKey;
-  // valorEmCentavos = Number(valor);
-  // if (isNaN(valorEmCentavos)) {
-  //   console.error('❌ O valor de "amount" é inválido:', valor);
-  //   return res.status(400).send('❌ O campo "amount" precisa ser um número em centavos, ex: 1599 para R$ 15,99.');
-  // }
-  // const valorFormatado = (valor / 100).toLocaleString('pt-BR', {
-  //   style: 'currency',
-  //   currency: 'BRL'
-  // });
+  const valorFormatado = (valor / 100).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  });
 
   try {
     let mensagens = [];
@@ -110,7 +105,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         ``,
         `Olá ! Aqui é ${artigo} *${empresa}*.`,
         ``,
-        `Estamos passando para lembrar que seu boleto no valor de *${valor}* vence em *3 dias*, no dia *${dataVencimento}*.`,
+        `Estamos passando para lembrar que seu boleto no valor de *${valorFormatado}* vence em *3 dias*, no dia *${dataVencimento}*.`,
         ``,
         `Para evitar juros e multas, efetue o pagamento até a data de vencimento.`,
         ``,
@@ -128,7 +123,7 @@ app.post('/enviar-cobranca', async (req, res) => {
         ``,
         `Olá! Aqui é ${artigo} *${empresa}*.`,
         ``,
-        `Seu boleto no valor de *${valor}* vence *HOJE* (${dataVencimento}).`,
+        `Seu boleto no valor de *${valorFormatado}* vence *HOJE* (${dataVencimento}).`,
         ``,
         `⏰ Para evitar juros e multas, efetue o pagamento ainda hoje!`,
         ``,
@@ -145,7 +140,7 @@ app.post('/enviar-cobranca', async (req, res) => {
       mensagens = [
         `🚨 *BOLETO VENCIDO*`,
         ``,
-        `Olá! Aqui é ${artigo} *${empresa}*. Identificamos que seu boleto no valor de *${valor}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}* (vencimento: ${dataVencimento}).`,
+        `Olá! Aqui é ${artigo} *${empresa}*. Identificamos que seu boleto no valor de *${valorFormatado}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}* (vencimento: ${dataVencimento}).`,
         ``,
         `⚠️ *IMPORTANTE:* Boletos vencidos podem ter juros e multas aplicados.`,
         ``,
