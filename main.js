@@ -16,37 +16,24 @@ const client = new Client({
   }
 });
 
-// --- LÓGICA DA FILA DE BLOQUEIO ---
-// Este objeto irá armazenar o estado de bloqueio para cada chatId.
-// A chave será o chatId (ex: '558496415518@c.us') e o valor será uma Promise
-// que representa a operação em andamento.
+// --- LÓGICA DA FILA DE BLOQUEIO (Inalterada) ---
 const chatLocks = {};
 
-// Função auxiliar para processar uma única tarefa de envio de mensagem
 async function processarEnvio(chatId, taskFunction) {
-  // Espera a promise anterior para este chat terminar, se houver uma.
-  // O 'await' aqui é a chave: ele pausa a execução até que a operação anterior seja resolvida.
-  await (chatLocks[chatId] || Promise.resolve());
-
-  // Cria uma nova promise que representa a tarefa atual e a armazena.
-  // Isso "bloqueia" o chat para as próximas requisições que chegarem.
-  const taskPromise = taskFunction();
+  const previousTask = chatLocks[chatId] || Promise.resolve();
+  
+  const taskPromise = previousTask.then(() => taskFunction());
   chatLocks[chatId] = taskPromise;
 
   try {
-    // Executa a tarefa atual
     await taskPromise;
   } finally {
-    // Após a conclusão (com sucesso ou erro), remove o bloqueio se a promise
-    // no objeto de locks ainda for a que acabamos de executar.
-    // Isso evita que uma nova requisição que chegou no meio do caminho seja sobrescrita.
     if (chatLocks[chatId] === taskPromise) {
       delete chatLocks[chatId];
     }
   }
 }
 // --- FIM DA LÓGICA DA FILA ---
-
 
 client.on('qr', qr => {
   qrcode.generate(qr, { small: true });
@@ -69,25 +56,22 @@ client.on('disconnected', reason => {
 
 client.initialize();
 
-
 // --- Endpoint /enviar-boleto (com controle de fila) ---
-app.post('/enviar-boleto', async (req, res) => {
+app.post('/enviar-boleto', (req, res) => {
   if (!whatsappPronto) {
     return res.status(503).send('❌ WhatsApp ainda está conectando. Tente novamente em alguns segundos.');
   }
 
   const { numero, artigo, empresa, pdfUrl, digitable, pixKey, amount } = req.body;
-
   if (!numero || !artigo || !empresa || !pdfUrl || !digitable || !pixKey || !amount) {
-    return res.status(400).send('Campos obrigatórios: numero, nome da empresa, artigo, código de barras, chave pix e pdfUrl');
+    return res.status(400).send('Campos obrigatórios ausentes.');
   }
 
   const chatId = `${numero}@c.us`;
 
-  // A função que contém a lógica de envio
   const task = async () => {
     try {
-      console.log(`[FILA] Iniciando envio para ${chatId}.`);
+      console.log(`[FILA] Iniciando envio de BOLETO para ${chatId}.`);
       const mensagemPrincipal = `Prezado cliente, aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto no valor de *${amount}* já está pronto. Para facilitar, enviamos o código de barras e a chave PIX logo abaixo.`;
       
       await client.sendMessage(chatId, mensagemPrincipal);
@@ -100,40 +84,82 @@ app.post('/enviar-boleto', async (req, res) => {
       const media = new MessageMedia(mimeType, base64, 'boleto.pdf');
       await client.sendMessage(chatId, media);
       
-      console.log(`[FILA] Finalizado envio para ${chatId}.`);
+      console.log(`[FILA] Finalizado envio de BOLETO para ${chatId}.`);
     } catch (error) {
-      console.error(`❌ Erro no processamento da fila para ${chatId}:`, error);
-      // Lançar o erro garante que a promise seja rejeitada e a fila continue
+      console.error(`❌ Erro no processamento da fila de BOLETO para ${chatId}:`, error);
       throw error;
     }
   };
 
-  // Adiciona a tarefa à fila de processamento para este chatId
-  processarEnvio(chatId, task)
-    .then(() => {
-        // A resposta para a API pode ser enviada imediatamente,
-        // pois a fila garante que o envio será feito na ordem correta.
-        console.log(`📨 Boleto para ${numero} enfileirado com sucesso.`);
-    })
-    .catch(error => {
-        console.error(`❌ Falha na execução da fila para ${numero}:`, error.message);
-    });
+  processarEnvio(chatId, task).catch(error => {
+    console.error(`❌ Falha crítica na execução da fila de BOLETO para ${numero}:`, error.message);
+  });
 
-  // Responda imediatamente à requisição HTTP. Não espere o envio terminar.
   res.status(202).send('✅ Boleto recebido e enfileirado para envio.');
 });
 
+// --- Endpoint /enviar-cobranca (CORRIGIDO com controle de fila) ---
+app.post('/enviar-cobranca', (req, res) => {
+  if (!whatsappPronto) {
+    return res.status(503).send('❌ WhatsApp ainda está conectando. Tente novamente em alguns segundos.');
+  }
 
-// O endpoint /enviar-cobranca pode usar a mesma lógica de fila.
-// A implementação seria muito similar.
-app.post('/enviar-cobranca', async (req, res) => {
-    // ... (a mesma lógica de envolver a tarefa de envio na função processarEnvio(chatId, task) seria aplicada aqui)
+  const { numero, artigo, empresa, diasParaVencimento, valor, digitable, pixKey, pdfUrl, dataVencimento } = req.body;
+  if (!numero || !artigo || !empresa || diasParaVencimento === undefined || !valor || !digitable || !pixKey || !pdfUrl) {
+    return res.status(400).send('Campos obrigatórios ausentes.');
+  }
+
+  const chatId = `${numero}@c.us`;
+
+  // A função de envio de cobrança agora é uma 'task' para a nossa fila
+  const task = async () => {
+    try {
+      console.log(`[FILA] Iniciando envio de COBRANÇA para ${chatId}.`);
+      const valorFormatado = (valor / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      let mensagemPrincipal;
+
+      if (diasParaVencimento == 3) {
+        mensagemPrincipal = `🔔 *LEMBRETE DE VENCIMENTO*\n\nOlá! Aqui é ${artigo} *${empresa}*.\nEstamos passando para lembrar que seu boleto no valor de *${valorFormatado}* vence em *3 dias*, no dia *${dataVencimento}*.\n\nPara evitar juros, efetue o pagamento até o vencimento.`;
+      } else if (diasParaVencimento == 0) {
+        mensagemPrincipal = `⚠️ *VENCIMENTO HOJE*\n\nOlá! Aqui é ${artigo} *${empresa}*.\nSeu boleto no valor de *${valorFormatado}* vence *HOJE* (${dataVencimento}).\n\n⏰ Para evitar juros, efetue o pagamento ainda hoje!`;
+      } else if (diasParaVencimento < 0) {
+        const diasVencido = Math.abs(diasParaVencimento);
+        mensagemPrincipal = `🚨 *BOLETO VENCIDO*\n\nOlá! Aqui é ${artigo} *${empresa}*.\nIdentificamos que seu boleto no valor de *${valorFormatado}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}*.\n\n⚠️ Para regularizar, utilize uma das opções de pagamento abaixo.`;
+      } else {
+        console.log(`[FILA] Nenhuma ação de cobrança para ${chatId} com ${diasParaVencimento} dias. Pulando.`);
+        return; // Sai da tarefa se não houver nada a fazer
+      }
+
+      await client.sendMessage(chatId, mensagemPrincipal);
+      await client.sendMessage(chatId, digitable);
+      await client.sendMessage(chatId, pixKey);
+
+      if (pdfUrl) {
+        const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
+        const base64 = Buffer.from(response.data, 'binary').toString('base64');
+        const mimeType = mime.lookup(pdfUrl) || 'application/pdf';
+        const media = new MessageMedia(mimeType, base64, 'boleto_cobranca.pdf');
+        await client.sendMessage(chatId, media);
+      }
+      console.log(`[FILA] Finalizado envio de COBRANÇA para ${chatId}.`);
+    } catch (error) {
+      console.error(`❌ Erro no processamento da fila de COBRANÇA para ${chatId}:`, error);
+      throw error;
+    }
+  };
+
+  // Adiciona a tarefa de cobrança à fila de processamento
+  processarEnvio(chatId, task).catch(error => {
+    console.error(`❌ Falha crítica na execução da fila de COBRANÇA para ${numero}:`, error.message);
+  });
+
+  // Responde imediatamente para não causar timeout no n8n
+  res.status(202).send('✅ Cobrança recebida e enfileirada para envio.');
 });
-
 
 app.listen(3000, '0.0.0.0', () => {
   console.log('🌐 API do bot rodando em http://localhost:3000' );
   console.log('📋 Endpoints disponíveis:');
   console.log('  POST /enviar-boleto - Enviar boleto inicial (com fila)');
-  console.log('  POST /enviar-cobranca - Enviar cobrança');
+  console.log('  POST /enviar-cobranca - Enviar cobrança (com fila)');
 });
