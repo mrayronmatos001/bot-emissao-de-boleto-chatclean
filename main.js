@@ -1,7 +1,7 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const express = require('express');
-const axios = require('axios');
+const axios =require('axios');
 const mime = require('mime-types');
 
 const app = express();
@@ -37,6 +37,7 @@ client.on('disconnected', reason => {
 
 client.initialize();
 
+// --- Endpoint /enviar-boleto (Refatorado) ---
 app.post('/enviar-boleto', async (req, res) => {
   if (!whatsappPronto) {
     return res.status(503).send('❌ WhatsApp ainda está conectando. Tente novamente em alguns segundos.');
@@ -49,21 +50,30 @@ app.post('/enviar-boleto', async (req, res) => {
   }
 
   const chatId = `${numero}@c.us`;
-  const mensagemPadrao = `Prezado cliente, aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto no valor de *${amount}* já está pronto. Utilize o código de barras para efetuar o pagamento.`;
+  
+  // 1. Mensagem principal unificada
+  const mensagemPrincipal = [
+    `Prezado cliente, aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto no valor de *${amount}* já está pronto.`,
+    `Para facilitar, enviamos abaixo o código de barras e a chave PIX para pagamento.`,
+    `Qualquer dúvida, estamos por aqui. 😊`
+  ].join('\n');
 
   try {
+    // Envia o bloco de texto principal
+    await client.sendMessage(chatId, mensagemPrincipal);
+
+    // Envia o código de barras (sozinho para cópia fácil)
+    await client.sendMessage(chatId, digitable);
+
+    // Envia a chave PIX (sozinha para cópia fácil)
+    await client.sendMessage(chatId, pixKey);
+
+    // Envia o anexo PDF
     const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
     const base64 = Buffer.from(response.data, 'binary').toString('base64');
     const mimeType = mime.lookup(pdfUrl) || 'application/pdf';
-
     const media = new MessageMedia(mimeType, base64, 'boleto.pdf');
-
-    await client.sendMessage(chatId, mensagemPadrao);
-    await client.sendMessage(chatId, digitable);
-    await client.sendMessage(chatId, `Se preferir, segue a chave pix como alternativa:`);
-    await client.sendMessage(chatId, pixKey);
     await client.sendMessage(chatId, media);
-    await client.sendMessage(chatId, `Qualquer dúvida, estamos por aqui. 😊`);
 
     console.log(`📨 Boleto enviado para ${numero}`);
     res.send('✅ Mensagem e PDF enviados com sucesso!');
@@ -73,6 +83,7 @@ app.post('/enviar-boleto', async (req, res) => {
   }
 });
 
+// --- Endpoint /enviar-cobranca (Refatorado) ---
 app.post('/enviar-cobranca', async (req, res) => {
   if (!whatsappPronto) {
     return res.status(503).send('❌ WhatsApp ainda está conectando. Tente novamente em alguns segundos.');
@@ -80,104 +91,83 @@ app.post('/enviar-cobranca', async (req, res) => {
 
   const { numero, artigo, empresa, diasParaVencimento, valor, digitable, pixKey, pdfUrl, dataVencimento } = req.body;
 
-  if (!numero || !artigo || !empresa || !diasParaVencimento || !valor || !digitable || !pixKey || !pdfUrl) {
-    return res.status(400).send('Campos obrigatórios: numero, artigo, empresa, valor, digitable, pixKey');
+  if (!numero || !artigo || !empresa || diasParaVencimento === undefined || !valor || !digitable || !pixKey || !pdfUrl) {
+    return res.status(400).send('Campos obrigatórios: numero, artigo, empresa, diasParaVencimento, valor, digitable, pixKey, pdfUrl, dataVencimento');
   }
 
   const chatId = `${numero}@c.us`;
-  const pix = pixKey;
   const valorFormatado = (valor / 100).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   });
 
+  let mensagemPrincipal;
+
+  // Define a mensagem principal com base nos dias para o vencimento
+  if (diasParaVencimento == 3) {
+    mensagemPrincipal = [
+      `🔔 *LEMBRETE DE VENCIMENTO*`,
+      ``,
+      `Olá! Aqui é ${artigo} *${empresa}*.`,
+      `Estamos passando para lembrar que seu boleto no valor de *${valorFormatado}* vence em *3 dias*, no dia *${dataVencimento}*.`,
+      ``,
+      `Para evitar juros e multas, efetue o pagamento até a data de vencimento.`,
+      `Abaixo, o código de barras e a chave PIX para facilitar:`,
+      ``,
+      `Qualquer dúvida, estamos à disposição! 😊`
+    ].join('\n');
+  } else if (diasParaVencimento == 0) {
+    mensagemPrincipal = [
+      `⚠️ *VENCIMENTO HOJE*`,
+      ``,
+      `Olá! Aqui é ${artigo} *${empresa}*.`,
+      `Seu boleto no valor de *${valorFormatado}* vence *HOJE* (${dataVencimento}).`,
+      ``,
+      `⏰ Para evitar juros e multas, efetue o pagamento ainda hoje!`,
+      `Use o código de barras ou a chave PIX abaixo:`,
+      ``,
+      `Em caso de dúvidas ou dificuldades, entre em contato conosco. Estamos aqui para ajudar! 📞`
+    ].join('\n');
+  } else if (diasParaVencimento < 0) { // Lógica para qualquer boleto vencido
+    const diasVencido = Math.abs(diasParaVencimento);
+    mensagemPrincipal = [
+      `🚨 *BOLETO VENCIDO*`,
+      ``,
+      `Olá! Aqui é ${artigo} *${empresa}*.`,
+      `Identificamos que seu boleto no valor de *${valorFormatado}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}* (vencimento: ${dataVencimento}).`,
+      ``,
+      `⚠️ *IMPORTANTE:* Para regularizar sua situação e evitar juros adicionais, utilize uma das opções de pagamento abaixo.`,
+      ``,
+      `📞 Para negociar ou esclarecer dúvidas, entre em contato conosco.`
+    ].join('\n');
+  } else {
+    // Caso não se encaixe em nenhuma regra, não envia nada.
+    return res.status(200).send('Nenhuma ação de cobrança para esta data.');
+  }
+
   try {
-    let mensagens = [];
+    // Envia a mensagem principal unificada
+    await client.sendMessage(chatId, mensagemPrincipal);
 
-    if (diasParaVencimento == 3) {
-      mensagens = [
-        `🔔 *LEMBRETE DE VENCIMENTO*`,
-        ``,
-        `Olá ! Aqui é ${artigo} *${empresa}*.`,
-        ``,
-        `Estamos passando para lembrar que seu boleto no valor de *${valorFormatado}* vence em *3 dias*, no dia *${dataVencimento}*.`,
-        ``,
-        `Para evitar juros e multas, efetue o pagamento até a data de vencimento.`,
-        ``,
-        `💳 *Código de barras:*`,
-        `${digitable}`,
-        ``,
-        `🔑 *Chave PIX (alternativa):*`,
-        `${pix}`,
-        ``,
-        `Qualquer dúvida, estamos à disposição! 😊`
-      ];
-    } else if (diasParaVencimento == 0) {
-      mensagens = [
-        `⚠️ *VENCIMENTO HOJE*`,
-        ``,
-        `Olá! Aqui é ${artigo} *${empresa}*.`,
-        ``,
-        `Seu boleto no valor de *${valorFormatado}* vence *HOJE* (${dataVencimento}).`,
-        ``,
-        `⏰ Para evitar juros e multas, efetue o pagamento ainda hoje!`,
-        ``,
-        `💳 *Código de barras:*`,
-        `${digitable}`,
-        ``,
-        `🔑 *Chave PIX (pagamento instantâneo):*`,
-        `${pix}`,
-        ``,
-        `Em caso de dúvidas ou dificuldades, entre em contato conosco. Estamos aqui para ajudar! 📞`
-      ];
-    } else if (diasParaVencimento == -1) {
-      const diasVencido = Math.abs(diasParaVencimento);
-      mensagens = [
-        `🚨 *BOLETO VENCIDO*`,
-        ``,
-        `Olá! Aqui é ${artigo} *${empresa}*. Identificamos que seu boleto no valor de *${valorFormatado}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}* (vencimento: ${dataVencimento}).`,
-        ``,
-        `⚠️ *IMPORTANTE:* Boletos vencidos podem ter juros e multas aplicados.`,
-        ``,
-        `💳 *Código de barras:*`,
-        `${digitable}`,
-        ``,
-        `🔑 *Chave PIX:*`,
-        `${pix}`,
-        ``,
-        `📞 Para negociar condições de pagamento ou esclarecer dúvidas, entre em contato conosco o quanto antes.`
-      ];
-    }
+    // Envia o código de barras (sozinho para cópia fácil)
+    await client.sendMessage(chatId, digitable);
 
-    for (const mensagem of mensagens) {
-      if (mensagem.trim()) {
-        await client.sendMessage(chatId, mensagem);
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    }
+    // Envia a chave PIX (sozinha para cópia fácil)
+    await client.sendMessage(chatId, pixKey);
 
+    // Envia o anexo PDF, se houver
     if (pdfUrl) {
-      try {
-        const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
-        const base64 = Buffer.from(response.data, 'binary').toString('base64');
-        const mimeType = mime.lookup(pdfUrl) || 'application/pdf';
-        const media = new MessageMedia(mimeType, base64, 'boleto.pdf');
-
-        await client.sendMessage(chatId, media);
-      } catch (pdfError) {
-        console.error('❌ Erro ao enviar PDF:', pdfError.message);
-      }
+      const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
+      const base64 = Buffer.from(response.data, 'binary').toString('base64');
+      const mimeType = mime.lookup(pdfUrl) || 'application/pdf';
+      const media = new MessageMedia(mimeType, base64, 'boleto.pdf');
+      await client.sendMessage(chatId, media);
     }
 
     console.log(`📨 Cobrança enviada para ${numero} - ${diasParaVencimento} dias para vencimento`);
     res.json({
       success: true,
       message: 'Cobrança enviada com sucesso!',
-      diasParaVencimento: diasParaVencimento,
-      tipoCobranca:
-        diasParaVencimento === 3 ? 'lembrete_3_dias' :
-        diasParaVencimento === 0 ? 'vencimento_hoje' :
-        diasParaVencimento === -1 ? 'vencido_faz_um_dia' : 'vencido'
     });
 
   } catch (error) {
@@ -191,7 +181,7 @@ app.post('/enviar-cobranca', async (req, res) => {
 });
 
 app.listen(3000, '0.0.0.0', () => {
-  console.log('🌐 API do bot rodando em http://localhost:3000');
+  console.log('🌐 API do bot rodando em http://localhost:3000' );
   console.log('📋 Endpoints disponíveis:');
   console.log('  POST /enviar-boleto - Enviar boleto inicial');
   console.log('  POST /enviar-cobranca - Enviar cobrança baseada no vencimento');
