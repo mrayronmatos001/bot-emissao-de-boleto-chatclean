@@ -22,7 +22,10 @@ const chatLocks = {};
 async function processarEnvio(chatId, taskFunction) {
   const previousTask = chatLocks[chatId] || Promise.resolve();
   
-  const taskPromise = previousTask.then(() => taskFunction());
+  const taskPromise = previousTask.then(() => taskFunction()).catch(err => {
+    console.error(`Erro na cadeia de promises para ${chatId}:`, err);
+  });
+
   chatLocks[chatId] = taskPromise;
 
   try {
@@ -56,7 +59,7 @@ client.on('disconnected', reason => {
 
 client.initialize();
 
-// --- Endpoint /enviar-boleto (com controle de fila) ---
+// --- Endpoint /enviar-boleto (COM MENSAGEM PADRONIZADA) ---
 app.post('/enviar-boleto', (req, res) => {
   if (!whatsappPronto) {
     return res.status(503).send('❌ WhatsApp ainda está conectando. Tente novamente em alguns segundos.');
@@ -72,7 +75,19 @@ app.post('/enviar-boleto', (req, res) => {
   const task = async () => {
     try {
       console.log(`[FILA] Iniciando envio de BOLETO para ${chatId}.`);
-      const mensagemPrincipal = `Prezado cliente, aqui é ${artigo} *${empresa}* e estamos passando para avisar que seu boleto no valor de *${amount}* já está pronto. Para facilitar, enviamos o código de barras e a chave PIX logo abaixo.`;
+      
+      // ### MENSAGEM AJUSTADA PARA O PADRÃO VISUAL ###
+      const mensagemPrincipal = [
+        `📄 *SEU BOLETO CHEGOU*`,
+        ``,
+        `Olá! Aqui é ${artigo} *${empresa}*.`,
+        `Seu boleto no valor de *${amount}* já está disponível para pagamento.`,
+        ``,
+        `Para facilitar, enviamos abaixo as opções de pagamento.`,
+        `Use o código de barras ou a chave PIX para pagar:`,
+        ``,
+        `Qualquer dúvida, estamos por aqui! 😊`
+      ].join('\n');
       
       await client.sendMessage(chatId, mensagemPrincipal);
       await client.sendMessage(chatId, digitable);
@@ -98,7 +113,7 @@ app.post('/enviar-boleto', (req, res) => {
   res.status(202).send('✅ Boleto recebido e enfileirado para envio.');
 });
 
-// --- Endpoint /enviar-cobranca (CORRIGIDO com controle de fila) ---
+// --- Endpoint /enviar-cobranca (com mensagens padronizadas) ---
 app.post('/enviar-cobranca', (req, res) => {
   if (!whatsappPronto) {
     return res.status(503).send('❌ WhatsApp ainda está conectando. Tente novamente em alguns segundos.');
@@ -111,7 +126,6 @@ app.post('/enviar-cobranca', (req, res) => {
 
   const chatId = `${numero}@c.us`;
 
-  // A função de envio de cobrança agora é uma 'task' para a nossa fila
   const task = async () => {
     try {
       console.log(`[FILA] Iniciando envio de COBRANÇA para ${chatId}.`);
@@ -119,15 +133,44 @@ app.post('/enviar-cobranca', (req, res) => {
       let mensagemPrincipal;
 
       if (diasParaVencimento == 3) {
-        mensagemPrincipal = `🔔 *LEMBRETE DE VENCIMENTO*\n\nOlá! Aqui é ${artigo} *${empresa}*.\nEstamos passando para lembrar que seu boleto no valor de *${valorFormatado}* vence em *3 dias*, no dia *${dataVencimento}*.\n\nPara evitar juros, efetue o pagamento até o vencimento.`;
+        mensagemPrincipal = [
+            `🔔 *LEMBRETE DE VENCIMENTO*`,
+            ``,
+            `Olá! Aqui é ${artigo} *${empresa}*.`,
+            `Estamos passando para lembrar que seu boleto no valor de *${valorFormatado}* vence em *3 dias*, no dia *${dataVencimento}*.`,
+            ``,
+            `Para evitar juros e multas, efetue o pagamento até a data de vencimento.`,
+            `Use o código de barras ou a chave PIX abaixo:`,
+            ``,
+            `Qualquer dúvida, estamos à disposição! 😊`
+        ].join('\n');
       } else if (diasParaVencimento == 0) {
-        mensagemPrincipal = `⚠️ *VENCIMENTO HOJE*\n\nOlá! Aqui é ${artigo} *${empresa}*.\nSeu boleto no valor de *${valorFormatado}* vence *HOJE* (${dataVencimento}).\n\n⏰ Para evitar juros, efetue o pagamento ainda hoje!`;
+        mensagemPrincipal = [
+            `⚠️ *VENCIMENTO HOJE*`,
+            ``,
+            `Olá! Aqui é ${artigo} *${empresa}*.`,
+            `Seu boleto no valor de *${valorFormatado}* vence *HOJE* (${dataVencimento}).`,
+            ``,
+            `⏰ Para evitar juros e multas, efetue o pagamento ainda hoje!`,
+            `Use o código de barras ou a chave PIX abaixo:`,
+            ``,
+            `Em caso de dúvidas ou dificuldades, entre em contato conosco. Estamos aqui para ajudar! 📞`
+        ].join('\n');
       } else if (diasParaVencimento < 0) {
         const diasVencido = Math.abs(diasParaVencimento);
-        mensagemPrincipal = `🚨 *BOLETO VENCIDO*\n\nOlá! Aqui é ${artigo} *${empresa}*.\nIdentificamos que seu boleto no valor de *${valorFormatado}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}*.\n\n⚠️ Para regularizar, utilize uma das opções de pagamento abaixo.`;
+        mensagemPrincipal = [
+            `🚨 *BOLETO VENCIDO*`,
+            ``,
+            `Olá! Aqui é ${artigo} *${empresa}*.`,
+            `Identificamos que seu boleto no valor de *${valorFormatado}* está vencido há *${diasVencido} dia${diasVencido > 1 ? 's' : ''}* (vencimento: ${dataVencimento}).`,
+            ``,
+            `⚠️ *IMPORTANTE:* Para regularizar sua situação e evitar juros adicionais, utilize uma das opções de pagamento abaixo.`,
+            ``,
+            `📞 Para negociar ou esclarecer dúvidas, entre em contato conosco.`
+        ].join('\n');
       } else {
         console.log(`[FILA] Nenhuma ação de cobrança para ${chatId} com ${diasParaVencimento} dias. Pulando.`);
-        return; // Sai da tarefa se não houver nada a fazer
+        return;
       }
 
       await client.sendMessage(chatId, mensagemPrincipal);
@@ -148,12 +191,10 @@ app.post('/enviar-cobranca', (req, res) => {
     }
   };
 
-  // Adiciona a tarefa de cobrança à fila de processamento
   processarEnvio(chatId, task).catch(error => {
     console.error(`❌ Falha crítica na execução da fila de COBRANÇA para ${numero}:`, error.message);
   });
 
-  // Responde imediatamente para não causar timeout no n8n
   res.status(202).send('✅ Cobrança recebida e enfileirada para envio.');
 });
 
