@@ -43,9 +43,11 @@ client.on('qr', qr => {
   console.log('📲 Escaneie o QR Code acima com seu WhatsApp.');
 });
 
-client.on('ready', () => {
-  whatsappPronto = true;
-  console.log('✅ Bot WhatsApp conectado e pronto!');
+client.on('ready', async () => {
+  const me = await client.getMe();
+  console.log('Meu JID:', me.id._serialized); // algo como 5584997050403@c.us
+
+  await client.sendMessage(me.id._serialized, '✅ Teste: isso deve chegar em você mesmo!');
 });
 
 client.on('auth_failure', msg => {
