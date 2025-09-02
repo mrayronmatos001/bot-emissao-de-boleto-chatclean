@@ -1,10 +1,11 @@
+const express = require('express');
+const app = express();
+
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const express = require('express');
 const axios = require('axios');
 const mime = require('mime-types');
 
-const app = express();
 app.use(express.json());
 
 let whatsappPronto = false;
@@ -218,7 +219,7 @@ app.post('/enviar-cobranca', async (req, res) => {
 
 // --- Iniciar servidor ---
 app.listen(3000, '0.0.0.0', () => {
-  console.log('🌐 API do bot rodando em http://localhost:3000');
+  console.log('🌐 API do bot rodando em http://localhost:3000' );
   console.log('📋 Endpoints disponíveis:');
   console.log('  POST /enviar-boleto - Enviar boleto inicial (com fila)');
   console.log('  POST /enviar-cobranca - Enviar cobrança (com fila)');
