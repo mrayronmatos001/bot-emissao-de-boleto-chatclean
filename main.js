@@ -108,11 +108,21 @@ app.post('/enviar-boleto', async (req, res) => {
       await client.sendMessage(chatId, digitable);
       await client.sendMessage(chatId, pixKey);
 
+      console.log(`[DEBUG] Tentando baixar PDF de: ${pdfUrl}`);
       const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
+      console.log(`[DEBUG] PDF baixado com sucesso. Tamanho: ${response.data.length} bytes`);
+
       const base64 = Buffer.from(response.data, 'binary').toString('base64');
+      console.log(`[DEBUG] Base64 convertido. Tamanho: ${base64.length} caracteres`);
+
       const mimeType = mime.lookup(pdfUrl) || 'application/pdf';
+      console.log(`[DEBUG] MIME type detectado: ${mimeType}`);
+
       const media = new MessageMedia(mimeType, base64, 'boleto.pdf');
+      console.log(`[DEBUG] MessageMedia criado com sucesso`);
+
       await client.sendMessage(chatId, media);
+      console.log(`[DEBUG] PDF enviado com sucesso!`);
 
       console.log(`[FILA] Finalizado envio de BOLETO para ${chatId}.`);
     } catch (error) {
@@ -197,11 +207,21 @@ app.post('/enviar-cobranca', async (req, res) => {
       await client.sendMessage(chatId, digitable);
       await client.sendMessage(chatId, pixKey);
 
+      console.log(`[DEBUG] Tentando baixar PDF de: ${pdfUrl}`);
       const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
+      console.log(`[DEBUG] PDF baixado com sucesso. Tamanho: ${response.data.length} bytes`);
+
       const base64 = Buffer.from(response.data, 'binary').toString('base64');
+      console.log(`[DEBUG] Base64 convertido. Tamanho: ${base64.length} caracteres`);
+
       const mimeType = mime.lookup(pdfUrl) || 'application/pdf';
+      console.log(`[DEBUG] MIME type detectado: ${mimeType}`);
+
       const media = new MessageMedia(mimeType, base64, 'boleto_cobranca.pdf');
+      console.log(`[DEBUG] MessageMedia criado com sucesso`);
+
       await client.sendMessage(chatId, media);
+      console.log(`[DEBUG] PDF enviado com sucesso!`);
 
       console.log(`[FILA] Finalizado envio de COBRANÇA para ${chatId}.`);
     } catch (error) {
