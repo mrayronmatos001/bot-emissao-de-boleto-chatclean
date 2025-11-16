@@ -29,6 +29,11 @@ async function obterChatIdSeguro(numero) {
   }
 }
 
+// --- Função para delay ---
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // --- Lógica da Fila ---
 const chatLocks = {};
 async function processarEnvio(chatId, taskFunction) {
@@ -104,9 +109,17 @@ app.post('/enviar-boleto', async (req, res) => {
         `Qualquer dúvida, estamos por aqui! 😊`
       ].join('\n');
 
+      console.log(`[DEBUG] Enviando mensagem principal...`);
       await client.sendMessage(chatId, mensagemPrincipal);
+      await delay(1000);
+      
+      console.log(`[DEBUG] Enviando digitable (tamanho: ${digitable.length} caracteres)`);
       await client.sendMessage(chatId, digitable);
+      await delay(1000);
+      
+      console.log(`[DEBUG] Enviando pixKey (tamanho: ${pixKey.length} caracteres)`);
       await client.sendMessage(chatId, pixKey);
+      await delay(1000);
 
       console.log(`[DEBUG] Tentando baixar PDF de: ${pdfUrl}`);
       const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
@@ -126,7 +139,8 @@ app.post('/enviar-boleto', async (req, res) => {
 
       console.log(`[FILA] Finalizado envio de BOLETO para ${chatId}.`);
     } catch (error) {
-      console.error(`❌ Erro no processamento da fila de BOLETO para ${chatId}:`, error);
+      console.error(`❌ Erro no processamento da fila de BOLETO para ${chatId}:`, error.message);
+      console.error(`Stack:`, error.stack);
       throw error;
     }
   };
@@ -203,9 +217,17 @@ app.post('/enviar-cobranca', async (req, res) => {
         return;
       }
 
+      console.log(`[DEBUG] Enviando mensagem principal de cobrança...`);
       await client.sendMessage(chatId, mensagemPrincipal);
+      await delay(1000);
+      
+      console.log(`[DEBUG] Enviando digitable (tamanho: ${digitable.length} caracteres)`);
       await client.sendMessage(chatId, digitable);
+      await delay(1000);
+      
+      console.log(`[DEBUG] Enviando pixKey (tamanho: ${pixKey.length} caracteres)`);
       await client.sendMessage(chatId, pixKey);
+      await delay(1000);
 
       console.log(`[DEBUG] Tentando baixar PDF de: ${pdfUrl}`);
       const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
@@ -225,7 +247,8 @@ app.post('/enviar-cobranca', async (req, res) => {
 
       console.log(`[FILA] Finalizado envio de COBRANÇA para ${chatId}.`);
     } catch (error) {
-      console.error(`❌ Erro no processamento da fila de COBRANÇA para ${chatId}:`, error);
+      console.error(`❌ Erro no processamento da fila de COBRANÇA para ${chatId}:`, error.message);
+      console.error(`Stack:`, error.stack);
       throw error;
     }
   };
